@@ -13,7 +13,7 @@ services:
       DATABASE_URL: file:./dev.db
     restart: unless-stopped
     healthcheck:
-      test: ["CMD","curl","-f","http://localhost:3000/_next/webpack/chunks/main.js"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/records || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
