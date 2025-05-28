@@ -1,5 +1,17 @@
+# Node
 node_modules/
+npm-debug.log*
+package-lock.json
+
+# Next.js
 .next/
+out/
+
+# Env files
+.env
+.env.local
+
+# Docker
 dev.db
 uploads/
-.env.local
+gcp-sa.json

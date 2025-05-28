@@ -2,86 +2,77 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import multer from 'multer';
-import fs from 'fs';
-import { createWorker } from 'tesseract.js';
-import { OpenAI } from 'openai';
+import fs from 'fs/promises';
+import { ImageAnnotatorClient } from '@google-cloud/vision';
 import { prisma } from '../../../lib/prisma';
 import { findRelease } from '../../../lib/discogs';
 
-// Load next-connect via require so we get the callable function at runtime
-const nextConnect = require('next-connect');
+export const config = { api: { bodyParser: false } };
 
-const upload = multer({ dest: './uploads/' });
+// Multer saves file to disk
+const upload = multer({ dest: '/tmp/' });
 
-const handler = nextConnect<NextApiRequest, NextApiResponse>({
-  onError(err: any, _req: NextApiRequest, res: NextApiResponse) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// Instantiate the Vision client (picks up GOOGLE_APPLICATION_CREDENTIALS)
+const vision = new ImageAnnotatorClient();
 
-handler.use(upload.single('image'));
-
-handler.post(async (req: any, res: NextApiResponse) => {
-  const file = req.file;
-  if (!file) {
-    return res.status(400).json({ error: 'No file provided' });
-  }
-
-  // 1) OCR via Tesseract.js
-  const worker = await createWorker();
-  await worker.load();
-  await worker.loadLanguage('eng');
-  await worker.initialize('eng');
-  const {
-    data: { text: rawText }
-  } = await worker.recognize(file.path);
-  await worker.terminate();
-
-  const text = rawText.trim();
-  const [artist, title] = text.split('–').map((s) => s.trim());
-
-  // 2) Discogs lookup
-  const release = await findRelease(artist, title);
-  const coverUrl = release?.thumb ?? null;
-
-  // 3) Insert into database
-  const record = await prisma.record.create({
-    data: {
-      artist,
-      title,
-      coverUrl,
-      year: release?.year ?? null,
-      genre: release?.genre?.[0] ?? null,
-      discogsId: release?.id ?? null
+export default upload.single('image')(async (req: any, res: NextApiResponse) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
     }
-  });
+    const path = req.file.path;
 
-  // 4) Optional AI “vibe”
-  let aiVibe: string | null = null;
-  if (process.env.OPENAI_API_KEY) {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-    const chat = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'You are a vinyl record enthusiast.' },
-        {
-          role: 'user',
-          content: `Describe the vibe of "${artist} – ${title}".`
-        }
-      ]
+    // 1) Run OCR
+    const [result] = await vision.textDetection(path);
+    const rawText = result.fullTextAnnotation?.text?.trim() ?? '';
+    const [artist, title] = rawText.split('–').map((s) => s.trim());
+
+    // 2) Query Discogs
+    const release = await findRelease(artist, title);
+    const coverUrl = release?.thumb ?? null;
+
+    // 3) Save to DB
+    const record = await prisma.record.create({
+      data: {
+        artist,
+        title,
+        coverUrl,
+        year: release?.year ?? null,
+        genre: release?.genre?.[0] ?? null,
+        discogsId: release?.id ?? null
+      }
     });
-    aiVibe = chat.choices[0].message.content;
-    await prisma.record.update({
-      where: { id: record.id },
-      data: { aiVibe }
-    });
+
+    // 4) (Optional) AI “vibe” from OpenAI
+    if (process.env.OPENAI_API_KEY) {
+      const { OpenAI } = await import('openai');
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+      const chat = await client.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: 'You are a vinyl record enthusiast.' },
+          {
+            role: 'user',
+            content: `Describe the vibe of "${artist} – ${title}".`
+          }
+        ]
+      });
+      const aiVibe = chat.choices[0].message.content;
+      await prisma.record.update({
+        where: { id: record.id },
+        data: { aiVibe }
+      });
+      record.aiVibe = aiVibe;
+    }
+
+    res.status(201).json(record);
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    // Remove temp file
+    if (req.file) {
+      await fs.unlink(req.file.path).catch(() => {});
+    }
   }
-
-  res.json({ ...record, aiVibe });
 });
-
-export const config = {
-  api: { bodyParser: false }
-};
-
-export default handler;

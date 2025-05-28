@@ -2,15 +2,17 @@ version: '3.8'
 services:
   app:
     build: .
-    ports:
-      - '4567:3000'
+    env_file: .env.local
     volumes:
       - ./uploads:/app/uploads
       - ./dev.db:/app/dev.db
++     - ./gcp-sa.json:/opt/keys/gcp-sa.json:ro
     environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      DISCOGS_TOKEN: ${DISCOGS_TOKEN}
-      DATABASE_URL: file:./dev.db
++     - GOOGLE_APPLICATION_CREDENTIALS=/opt/keys/gcp-sa.json
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DISCOGS_TOKEN=${DISCOGS_TOKEN}
+    ports:
+      - "4567:3000"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/api/records || exit 1"]
