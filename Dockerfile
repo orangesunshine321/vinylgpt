@@ -1,38 +1,37 @@
 # ===== Build Stage =====
-FROM node:18-alpine AS builder
+FROM node:18-bullseye-slim AS builder
 WORKDIR /app
 
+# Install OpenSSL 1.1 for Prisma generation (optional, but safe)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libssl1.1 ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
 # 1. Copy only package.json & install deps
-COPY package.json ./
+COPY package.json package-lock.json* ./
 RUN npm install
 
-# 2. Install OpenSSL & 1.1 compatibility (needed for Prisma generate)
-RUN apk add --no-cache openssl compat-openssl11
-
-# 3. Generate Prisma client
+# 2. Generate Prisma client
 COPY prisma ./prisma
 RUN npx prisma generate
 
-# 4. Copy source & build
+# 3. Copy everything else & build
 COPY . .
 RUN npm run build
 
 # ===== Production Stage =====
-FROM node:18-alpine
+FROM node:18-bullseye-slim
 WORKDIR /app
 
-# 1. Install OpenSSL & 1.1 compatibility so Prisma engine can load at runtime
-RUN apk add --no-cache openssl compat-openssl11
+# Install OpenSSL 1.1 so the Prisma query engine can load
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libssl1.1 ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-# 2. Copy built app & deps
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/lib ./lib
+# Copy built app and node_modules over
+COPY --from=builder /app ./
 
+# Expose the port and run
 EXPOSE 3000
 ENV NODE_ENV=production
-
 CMD ["npm","start"]
