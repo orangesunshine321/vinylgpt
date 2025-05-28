@@ -4,34 +4,44 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import multer from 'multer';
 import fs from 'fs/promises';
 import { ImageAnnotatorClient } from '@google-cloud/vision';
+import nextConnect, { NextConnect } from 'next-connect';
 import { prisma } from '../../../lib/prisma';
 import { findRelease } from '../../../lib/discogs';
 
 export const config = { api: { bodyParser: false } };
 
-// Multer saves file to disk
+// Multer will write uploads to /tmp/
 const upload = multer({ dest: '/tmp/' });
 
-// Instantiate the Vision client (picks up GOOGLE_APPLICATION_CREDENTIALS)
+// Google Vision client (uses GOOGLE_APPLICATION_CREDENTIALS)
 const vision = new ImageAnnotatorClient();
 
-export default upload.single('image')(async (req: any, res: NextApiResponse) => {
+// Create handler with correct typing
+const handler: NextConnect<NextApiRequest, NextApiResponse> = nextConnect({
+  onError(err, _req, res) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+handler.use(upload.single('image'));
+
+handler.post(async (req: any, res: NextApiResponse) => {
   try {
-    if (!req.file) {
+    const file = req.file;
+    if (!file) {
       return res.status(400).json({ error: 'No file provided' });
     }
-    const path = req.file.path;
 
-    // 1) Run OCR
-    const [result] = await vision.textDetection(path);
+    // 1) OCR via Google Vision
+    const [result] = await vision.textDetection(file.path);
     const rawText = result.fullTextAnnotation?.text?.trim() ?? '';
     const [artist, title] = rawText.split('–').map((s) => s.trim());
 
-    // 2) Query Discogs
+    // 2) Discogs lookup
     const release = await findRelease(artist, title);
     const coverUrl = release?.thumb ?? null;
 
-    // 3) Save to DB
+    // 3) Insert into DB
     const record = await prisma.record.create({
       data: {
         artist,
@@ -43,7 +53,7 @@ export default upload.single('image')(async (req: any, res: NextApiResponse) => 
       }
     });
 
-    // 4) (Optional) AI “vibe” from OpenAI
+    // 4) Optional AI “vibe”
     if (process.env.OPENAI_API_KEY) {
       const { OpenAI } = await import('openai');
       const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
@@ -70,9 +80,10 @@ export default upload.single('image')(async (req: any, res: NextApiResponse) => 
     console.error(err);
     res.status(500).json({ error: err.message });
   } finally {
-    // Remove temp file
     if (req.file) {
       await fs.unlink(req.file.path).catch(() => {});
     }
   }
 });
+
+export default handler;
