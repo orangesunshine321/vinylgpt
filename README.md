@@ -7,13 +7,11 @@ A self-hosted PWA for cataloging your vinyl record collection by snapping cover 
 ## 🚀 Quick One-Line Install
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/orangesunshine321/vinylgpt/main/get-vinylgpt.sh) [install-dir]
+bash <(curl -fsSL https://raw.githubusercontent.com/orangesunshine321/vinylgpt/main/get-vinylgpt.sh)
 ```
 
-- Clones (or updates) into `[install-dir]` (defaults to `./vinylgpt`)  
-- Prompts you for your OpenAI & Discogs keys  
-- Builds and runs the Docker container  
-- Serves at `http://<your-host-ip>:3000`
+> View the install script on GitHub:  
+> https://github.com/orangesunshine321/vinylgpt/blob/main/get-vinylgpt.sh
 
 ---
 
@@ -87,7 +85,8 @@ curl http://localhost:3000/api/records
 ### 2. Upload a Test Cover
 
 ```bash
-curl -X POST http://localhost:3000/api/records/upload   -F 'image=@/full/path/to/cover.jpg;type=image/jpeg'
+curl -X POST http://localhost:3000/api/records/upload \
+  -F 'image=@/full/path/to/cover.jpg;type=image/jpeg'
 # → returns JSON with artist/title, Discogs metadata, etc.
 ```
 
@@ -145,3 +144,12 @@ Visit `http://localhost:3000`.
 
 - **Windows/WSL2 users**  
   Use a WSL2 shell or Git Bash. Ensure line endings are LF (`.gitattributes` helps).
+
+---
+
+## 🤝 Contributing
+
+1. Fork & clone  
+2. Create a feature branch (`git checkout -b feat/your-feature`)  
+3. Run `npm run lint && npm run typecheck` before pushing  
+4. Open a PR—happy to review!
