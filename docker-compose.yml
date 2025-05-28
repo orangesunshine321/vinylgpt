@@ -3,7 +3,7 @@ services:
   app:
     build: .
     ports:
-      - '3000:3000'
+      - '4567:3000'
     volumes:
       - ./uploads:/app/uploads
       - ./dev.db:/app/dev.db
