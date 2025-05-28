@@ -1,7 +1,7 @@
 // pages/api/records/upload.tsx
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import * as nextConnect from 'next-connect';
+import nc from 'next-connect';
 import multer from 'multer';
 import fs from 'fs';
 import { createWorker } from 'tesseract.js';
@@ -11,7 +11,7 @@ import { findRelease } from '../../../lib/discogs';
 
 const upload = multer({ dest: './uploads/' });
 
-const handler = nextConnect<NextApiRequest, NextApiResponse>({
+const handler = nc<NextApiRequest, NextApiResponse>({
   onError(err, _req, res) {
     res.status(500).json({ error: err.message });
   }
