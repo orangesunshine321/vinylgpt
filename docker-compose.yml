@@ -1,16 +1,18 @@
 version: '3.8'
+
 services:
   app:
     build: .
-    env_file: .env.local
+    env_file:
+      - .env.local
     volumes:
       - ./uploads:/app/uploads
       - ./dev.db:/app/dev.db
-+     - ./gcp-sa.json:/opt/keys/gcp-sa.json:ro
+      - ./gcp-sa.json:/opt/keys/gcp-sa.json:ro
     environment:
-+     - GOOGLE_APPLICATION_CREDENTIALS=/opt/keys/gcp-sa.json
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - DISCOGS_TOKEN=${DISCOGS_TOKEN}
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/keys/gcp-sa.json
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DISCOGS_TOKEN: ${DISCOGS_TOKEN}
     ports:
       - "4567:3000"
     restart: unless-stopped
