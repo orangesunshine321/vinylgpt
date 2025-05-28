@@ -36,7 +36,7 @@ handler.post(async (req: any, res: NextApiResponse) => {
   await worker.terminate();
 
   const text = rawText.trim();
-  const [artist, title] = text.split('–').map(s => s.trim());
+  const [artist, title] = text.split('–').map((s) => s.trim());
 
   // 2) Discogs lookup
   const release = await findRelease(artist, title);
@@ -54,7 +54,7 @@ handler.post(async (req: any, res: NextApiResponse) => {
     }
   });
 
-  // 4) (Optional) AI-generated vibe
+  // 4) (Optional) AI-generated “vibe”
   let aiVibe: string | null = null;
   if (process.env.OPENAI_API_KEY) {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -69,7 +69,6 @@ handler.post(async (req: any, res: NextApiResponse) => {
       ]
     });
     aiVibe = chat.choices[0].message.content;
-    // Persist the vibe
     await prisma.record.update({
       where: { id: record.id },
       data: { aiVibe }
