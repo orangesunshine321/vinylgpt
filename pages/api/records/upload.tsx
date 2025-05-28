@@ -8,13 +8,13 @@ import { OpenAI } from 'openai';
 import { prisma } from '../../../lib/prisma';
 import { findRelease } from '../../../lib/discogs';
 
-// Use require to grab the default export so TypeScript sees the callable function
-const nextConnect = require('next-connect').default as <Req, Res>(opts: any) => any;
+// import next-connect via require and assert the callable signature
+const nextConnect = (require('next-connect').default as <Req, Res>(opts?: any) => any);
 
 const upload = multer({ dest: './uploads/' });
 
 const handler = nextConnect<NextApiRequest, NextApiResponse>({
-  onError(err, _req, res) {
+  onError(err: any, _req: NextApiRequest, res: NextApiResponse) {
     res.status(500).json({ error: err.message });
   }
 });
