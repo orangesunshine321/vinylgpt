@@ -1,7 +1,6 @@
 // pages/api/records/upload.tsx
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import nc from 'next-connect';
 import multer from 'multer';
 import fs from 'fs';
 import { createWorker } from 'tesseract.js';
@@ -9,9 +8,12 @@ import { OpenAI } from 'openai';
 import { prisma } from '../../../lib/prisma';
 import { findRelease } from '../../../lib/discogs';
 
+// Use require to grab the default export so TypeScript sees the callable function
+const nextConnect = require('next-connect').default as <Req, Res>(opts: any) => any;
+
 const upload = multer({ dest: './uploads/' });
 
-const handler = nc<NextApiRequest, NextApiResponse>({
+const handler = nextConnect<NextApiRequest, NextApiResponse>({
   onError(err, _req, res) {
     res.status(500).json({ error: err.message });
   }
