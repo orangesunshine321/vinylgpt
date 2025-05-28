@@ -23,7 +23,7 @@ handler.post(async (req: any, res) => {
   if (!file) return res.status(400).json({ error: 'No file provided' });
 
   // 1) OCR via Tesseract.js
-  const worker = createWorker();
+  const worker = await createWorker();
   await worker.load();
   await worker.loadLanguage('eng');
   await worker.initialize('eng');
