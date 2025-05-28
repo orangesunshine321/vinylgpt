@@ -4,21 +4,21 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import multer from 'multer';
 import fs from 'fs/promises';
 import { ImageAnnotatorClient } from '@google-cloud/vision';
-import nextConnect, { NextConnect } from 'next-connect';
+import nextConnect from 'next-connect';
 import { prisma } from '../../../lib/prisma';
 import { findRelease } from '../../../lib/discogs';
 
 export const config = { api: { bodyParser: false } };
 
-// Multer will write uploads to /tmp/
+// Multer config: saves into /tmp/
 const upload = multer({ dest: '/tmp/' });
 
-// Google Vision client (uses GOOGLE_APPLICATION_CREDENTIALS)
+// Instantiate Vision client (uses GOOGLE_APPLICATION_CREDENTIALS)
 const vision = new ImageAnnotatorClient();
 
-// Create handler with correct typing
-const handler: NextConnect<NextApiRequest, NextApiResponse> = nextConnect({
-  onError(err, _req, res) {
+// Create a handler without generics
+const handler = nextConnect({
+  onError(err, _req, res: NextApiResponse) {
     res.status(500).json({ error: err.message });
   }
 });
@@ -41,7 +41,7 @@ handler.post(async (req: any, res: NextApiResponse) => {
     const release = await findRelease(artist, title);
     const coverUrl = release?.thumb ?? null;
 
-    // 3) Insert into DB
+    // 3) Persist to DB
     const record = await prisma.record.create({
       data: {
         artist,
@@ -53,7 +53,7 @@ handler.post(async (req: any, res: NextApiResponse) => {
       }
     });
 
-    // 4) Optional AI “vibe”
+    // 4) Optional AI-generated “vibe”
     if (process.env.OPENAI_API_KEY) {
       const { OpenAI } = await import('openai');
       const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
@@ -80,6 +80,7 @@ handler.post(async (req: any, res: NextApiResponse) => {
     console.error(err);
     res.status(500).json({ error: err.message });
   } finally {
+    // Clean up temp file
     if (req.file) {
       await fs.unlink(req.file.path).catch(() => {});
     }
