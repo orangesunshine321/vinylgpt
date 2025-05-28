@@ -2,20 +2,20 @@
 FROM node:18-bullseye-slim AS builder
 WORKDIR /app
 
-# Install OpenSSL 1.1 for Prisma
+# 1. Install OpenSSL 1.1 (needed by Prisma)
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libssl1.1 ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# 1) Copy package.json and install all dependencies
+# 2. Copy package manifests and install deps
 COPY package.json ./
 RUN npm install
 
-# 2) Generate Prisma client
+# 3. Generate Prisma client
 COPY prisma ./prisma
 RUN npx prisma generate
 
-# 3) Copy rest of the app & build
+# 4. Copy the rest and build Next.js
 COPY . .
 RUN npm run build
 
@@ -23,15 +23,15 @@ RUN npm run build
 FROM node:18-bullseye-slim
 WORKDIR /app
 
-# Install OpenSSL so the Prisma engine can load
+# Install OpenSSL for runtime
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libssl1.1 ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# Copy the built app from the builder stage
+# Copy built app from builder
 COPY --from=builder /app ./
 
 EXPOSE 3000
 ENV NODE_ENV=production
 
-CMD ["npm","start"]
+CMD ["npm", "start"]
