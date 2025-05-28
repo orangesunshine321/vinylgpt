@@ -13,95 +13,75 @@ interface Record {
 export default function Home() {
   const [records, setRecords] = useState<Record[]>([])
   const [file, setFile] = useState<File | null>(null)
-  const [uploading, setUploading] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchRecords()
+    (async () => {
+      try {
+        const { data } = await axios.get<Record[]>('/api/records')
+        setRecords(data)
+      } catch {
+        setError('⚠️ Could not load records.')
+      }
+    })()
   }, [])
 
-  const fetchRecords = async () => {
-    try {
-      const res = await axios.get<Record[]>('/api/records')
-      setRecords(res.data)
-    } catch {
-      setError('Failed to load your collection.')
-    }
-  }
-
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setError(null)
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0])
-    }
-  }
-
-  const handleUpload = async () => {
+  const upload = async () => {
     if (!file) return
-    setUploading(true)
-    setError(null)
+    setLoading(true); setError(null)
+    const form = new FormData()
+    form.append('image', file)
     try {
-      const form = new FormData()
-      form.append('image', file)
       await axios.post('/api/records/upload', form, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: {'Content-Type': 'multipart/form-data'}
       })
       setFile(null)
-      fetchRecords()
+      const { data } = await axios.get<Record[]>('/api/records')
+      setRecords(data)
     } catch {
-      setError('Upload failed. Try again.')
+      setError('⚠️ Upload failed.')
     } finally {
-      setUploading(false)
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-      <h1 className="text-4xl font-bold text-center mb-4 text-gray-800 dark:text-gray-100">
-        VinylGPT
-      </h1>
-      <p className="text-center text-gray-600 dark:text-gray-300 mb-6">
-        Snap or select a vinyl cover to add to your collection.
-      </p>
+    <div className="min-h-screen p-6 font-mono bg-black text-green-400">
+      <h1 className="text-5xl text-center mb-4">𝐕𝐈𝐍𝐘𝐋𝐆𝐏𝐓</h1>
+      <p className="text-center mb-8">▉ Snap a cover, let the code rain ↓</p>
 
-      <div className="flex flex-col items-center mb-6 space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
+      <div className="flex flex-col sm:flex-row justify-center items-center mb-8 gap-4">
         <input
           type="file"
           accept="image/*"
           capture="environment"
-          onChange={handleFileChange}
-          className="block w-full max-w-xs text-sm text-gray-500 dark:text-gray-300
-            file:mr-4 file:py-2 file:px-4
-            file:rounded file:border-0
-            file:text-sm file:font-semibold
-            file:bg-blue-100 file:text-blue-700
-            hover:file:bg-blue-200"
+          onChange={(e: ChangeEvent<HTMLInputElement>) =>
+            e.target.files && setFile(e.target.files[0])
+          }
+          className="file:border file:border-green-400 file:px-4 file:py-2 file:rounded hover:file:bg-green-900"
         />
         <button
-          onClick={handleUpload}
-          disabled={!file || uploading}
-          className="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 disabled:opacity-50"
+          onClick={upload}
+          disabled={!file || loading}
+          className="px-6 py-2 border border-green-400 rounded hover:bg-green-900 disabled:opacity-50"
         >
-          {uploading ? 'Uploading…' : 'Upload'}
+          {loading ? '⏳ Uploading...' : '▶ Upload'}
         </button>
       </div>
 
-      {error && (
-        <p className="text-center text-red-600 dark:text-red-400 mb-6">
-          {error}
-        </p>
-      )}
+      {error && <div className="text-center text-red-500 mb-6">{error}</div>}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {records.length === 0 && !error ? (
-          <p className="col-span-full text-center text-gray-500 dark:text-gray-400">
-            No records yet. Upload your first cover above!
-          </p>
+          <div className="col-span-full text-center text-green-600">
+            No records yet. Upload to start the flow.
+          </div>
         ) : (
-          records.map((r) => (
+          records.map(r => (
             <div
               key={r.id}
-              className="bg-white dark:bg-gray-800 shadow rounded overflow-hidden"
+              className="bg-gray-900 border border-green-700 rounded overflow-hidden shadow-lg"
             >
               {r.coverUrl ? (
                 <img
@@ -110,23 +90,17 @@ export default function Home() {
                   className="w-full h-48 object-cover"
                 />
               ) : (
-                <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                  <span className="text-gray-500 dark:text-gray-400">
-                    No Image
-                  </span>
+                <div className="w-full h-48 bg-green-900 flex items-center justify-center">
+                  <span>No Cover</span>
                 </div>
               )}
-              <div className="p-3">
-                <h3 className="font-semibold text-gray-800 dark:text-gray-100">
-                  {r.artist}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  {r.title}
-                </p>
+              <div className="p-4">
+                <div className="font-bold">{r.artist}</div>
+                <div className="italic mb-2">{r.title}</div>
                 {r.aiVibe && (
-                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    {r.aiVibe}
-                  </p>
+                  <div className="text-sm text-green-300">
+                    “{r.aiVibe}”
+                  </div>
                 )}
               </div>
             </div>
