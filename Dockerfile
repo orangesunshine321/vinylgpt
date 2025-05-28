@@ -2,14 +2,18 @@
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# 1. Copy only package.json & install deps
+# Install dependencies
 COPY package.json ./
 RUN npm install
 
-# 2. Copy the rest, generate Prisma client, then build
+# Install OpenSSL (required for Prisma on Alpine)
+RUN apk add --no-cache openssl
+
+# Generate Prisma client
 COPY prisma ./prisma
 RUN npx prisma generate
 
+# Copy source & build
 COPY . .
 RUN npm run build
 

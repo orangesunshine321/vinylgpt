@@ -16,5 +16,7 @@ model Record {
   genre     String?
   discogsId Int?
   aiVibe    String?
-  createdAt DateTime @default(now()) @index
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
