@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./uploads:/app/uploads
+      - ./dev.db:/app/dev.db
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DISCOGS_TOKEN: ${DISCOGS_TOKEN}
+      DATABASE_URL: file:./dev.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD","curl","-f","http://localhost:3000/_next/webpack/chunks/main.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
