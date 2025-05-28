@@ -1,6 +1,7 @@
 // pages/api/records/upload.tsx
+
 import type { NextApiRequest, NextApiResponse } from 'next';
-import nextConnect from 'next-connect';
+import nextConnect = require('next-connect');
 import multer from 'multer';
 import fs from 'fs';
 import { createWorker } from 'tesseract.js';
@@ -18,9 +19,11 @@ const handler = nextConnect<NextApiRequest, NextApiResponse>({
 
 handler.use(upload.single('image'));
 
-handler.post(async (req: any, res) => {
+handler.post(async (req: any, res: NextApiResponse) => {
   const file = req.file;
-  if (!file) return res.status(400).json({ error: 'No file provided' });
+  if (!file) {
+    return res.status(400).json({ error: 'No file provided' });
+  }
 
   // 1) OCR via Tesseract.js
   const worker = await createWorker();
