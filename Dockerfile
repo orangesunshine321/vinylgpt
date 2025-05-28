@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Copy only package.json (no lock file) and install deps
 COPY package.json ./
-RUN npm install || npm ci
+RUN npm install
 
 # Copy all source & build
 COPY . .

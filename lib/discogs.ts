@@ -1,6 +1,19 @@
-import Discogs from 'discogs-client';
-export async function findRelease(artist: string, title: string) {
-  const client = new Discogs({ userToken: process.env.DISCOGS_TOKEN });
-  const res = await client.search.artistRelease(artist, { release_title: title });
-  return res.results[0] || null;
+// lib/discogs.ts
+import axios from 'axios';
+
+export interface DiscogsRelease {
+  id: number;
+  title: string;
+  thumb: string;
+  year?: number;
+  genre?: string[];
+  format?: string[];
+}
+
+export async function findRelease(artist: string, title: string): Promise<DiscogsRelease | null> {
+  const token = process.env.DISCOGS_TOKEN;
+  const query = encodeURIComponent(`${artist} ${title}`);
+  const url = `https://api.discogs.com/database/search?q=${query}&token=${token}&type=release&per_page=5`;
+  const { data } = await axios.get(url);
+  return data.results?.[0] ?? null;
 }
