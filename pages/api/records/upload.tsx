@@ -8,8 +8,8 @@ import { OpenAI } from 'openai';
 import { prisma } from '../../../lib/prisma';
 import { findRelease } from '../../../lib/discogs';
 
-// import next-connect via require and assert the callable signature
-const nextConnect = (require('next-connect').default as <Req, Res>(opts?: any) => any);
+// Load next-connect via require so we get the callable function at runtime
+const nextConnect = require('next-connect');
 
 const upload = multer({ dest: './uploads/' });
 
@@ -44,7 +44,7 @@ handler.post(async (req: any, res: NextApiResponse) => {
   const release = await findRelease(artist, title);
   const coverUrl = release?.thumb ?? null;
 
-  // 3) Insert into SQLite
+  // 3) Insert into database
   const record = await prisma.record.create({
     data: {
       artist,
@@ -56,17 +56,17 @@ handler.post(async (req: any, res: NextApiResponse) => {
     }
   });
 
-  // 4) (Optional) AI-generated “vibe”
+  // 4) Optional AI “vibe”
   let aiVibe: string | null = null;
   if (process.env.OPENAI_API_KEY) {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
     const chat = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are a vinyl record enthusiast.' },
         {
           role: 'user',
-          content: `Describe the vibe of the record "${artist} – ${title}".`
+          content: `Describe the vibe of "${artist} – ${title}".`
         }
       ]
     });
