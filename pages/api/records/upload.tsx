@@ -1,7 +1,7 @@
 // pages/api/records/upload.tsx
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import nextConnect = require('next-connect');
+import * as nextConnect from 'next-connect';
 import multer from 'multer';
 import fs from 'fs';
 import { createWorker } from 'tesseract.js';
